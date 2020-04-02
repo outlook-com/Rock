@@ -81,7 +81,7 @@ namespace Rock.Obsidian.Blocks
             return
 $@"<div id=""{rootElementId}""></div>
 <script>
-    Obsidian.Util.loadVueFile('/Obsidian/{BlockMarkupFileIdentifier}.vue', '#{rootElementId}');
+    Obsidian.Util.loadVueFile('/Obsidian/Blocks/{BlockMarkupFileIdentifier}.vue', '#{rootElementId}');
 </script>
 <script type=""text/javascript"">
     Obsidian.Blocks['{BlockMarkupFileIdentifier}'] = {{

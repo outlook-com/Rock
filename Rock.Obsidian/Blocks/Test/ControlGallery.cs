@@ -14,14 +14,9 @@
 // limitations under the License.
 // </copyright>
 //
-using System;
 using System.ComponentModel;
-using System.Linq;
-using System.Net;
 using Rock.Attribute;
-using Rock.Blocks;
 using Rock.Model;
-using Rock.Web.Cache;
 
 namespace Rock.Obsidian.Blocks.Test
 {
@@ -30,12 +25,12 @@ namespace Rock.Obsidian.Blocks.Test
     /// </summary>
     /// <seealso cref="Rock.Blocks.ObsidianBlockType" />
 
-    [DisplayName( "Controls" )]
+    [DisplayName( "Control Gallery" )]
     [Category( "Obsidian > Test" )]
     [Description( "Allows the user to try out various controls." )]
     [IconCssClass( "fa fa-flask" )]
 
-    public class Controls : ObsidianBlockType
+    public class ControlGallery : ObsidianBlockType
     {
         #region IObsidianBlockType Implementation
 
@@ -53,7 +48,7 @@ namespace Rock.Obsidian.Blocks.Test
         /// <value>
         /// The block markup file identifier.
         /// </value>
-        public override string BlockMarkupFileIdentifier => "Test/Controls";
+        public override string BlockMarkupFileIdentifier => "Test/ControlGallery";
 
         /// <summary>
         /// Gets the property values that will be sent to the browser.
