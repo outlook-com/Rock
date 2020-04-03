@@ -76,16 +76,13 @@ namespace Rock.Obsidian.Blocks
         /// <returns></returns>
         public override string GetControlMarkup()
         {
-            var rootElementId = $"obsidian-{this.BlockCache.Guid}";
+            var instanceId = $"obsidian-{this.BlockCache.Guid}";
 
             return
-$@"<div id=""{rootElementId}""></div>
-<script>
-    Obsidian.Util.loadVueFile('/Obsidian/Blocks/{BlockMarkupFileIdentifier}.vue', '#{rootElementId}');
-</script>
+$@"<div id=""{instanceId}""></div>
 <script type=""text/javascript"">
     Obsidian.Blocks['{BlockMarkupFileIdentifier}'] = {{
-        rootElement: document.getElementById('{rootElementId}'),
+        instanceId: '{instanceId}',
         pageId: {BlockCache.PageId},
         blockId: {BlockCache.Id},
         additionalSettingsJson: {ConvertObjectToJavaScript( GetAdditionalSettings() )},
@@ -95,6 +92,17 @@ $@"<div id=""{rootElementId}""></div>
             blockId: {BlockCache.Id}
         }})
     }};
+
+    new Vue({{
+        el: '#{instanceId}',
+        components: {{
+            block: Obsidian.Util.loadVueFile('/Obsidian/Blocks/{BlockMarkupFileIdentifier}.vue')
+        }},
+        provide: {{
+            context: Obsidian.Blocks['{BlockMarkupFileIdentifier}']
+        }},
+        template: '<block id=""{instanceId}"" />'
+    }});
 </script>";
         }
 

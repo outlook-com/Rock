@@ -14,28 +14,35 @@
 // limitations under the License.
 // </copyright>
 //
+using System;
 using System.Linq;
 using System.Net;
 using Rock.Web.Cache;
 
 namespace Rock.Obsidian.Controls
 {
-    public class DefinedTypePicker : IObsidianControl
+    public class DefinedValuePicker : IObsidianControl
     {
         /// <summary>
-        /// Gets all defined types.
+        /// Gets the values for a given type
         /// </summary>
+        /// <param name="definedTypeGuid">The defined type unique identifier.</param>
         /// <returns></returns>
-        [ControlAction( "GetAllDefinedTypes" )]
-        public ControlActionResult GetAllDefinedTypes()
+        [ControlAction( "GetValuesForType" )]
+        public ControlActionResult GetValuesForType(Guid definedTypeGuid)
         {
-            var definedTypes = DefinedTypeCache.All().Where( dt => dt.IsActive ).Select( dt => new
+            var definedValues = DefinedTypeCache.Get(definedTypeGuid)?.DefinedValues.Select( dv => new
             {
-                dt.Name,
-                dt.Guid
+                dv.Value,
+                dv.Guid
             } );
 
-            return new ControlActionResult( HttpStatusCode.Created, definedTypes );
+            if (definedValues == null)
+            {
+                return new ControlActionResult( HttpStatusCode.NotFound );
+            }
+
+            return new ControlActionResult( HttpStatusCode.Created, definedValues );
         }
     }
 }

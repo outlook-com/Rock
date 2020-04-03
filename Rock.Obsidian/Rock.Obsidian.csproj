@@ -47,7 +47,10 @@
     <Compile Include="Blocks\Test\ControlGallery.cs" />
     <Compile Include="Controls\ControlActionResult.cs" />
     <Compile Include="Controls\ControlActionAttribute.cs" />
+    <Compile Include="Controls\DefinedValuePicker.cs" />
     <Compile Include="Controls\DefinedTypePicker.cs" />
+    <Compile Include="Controls\IObsidianControl.cs" />
+    <Compile Include="Controls\ObsidianControlsContainer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

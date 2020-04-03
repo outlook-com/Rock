@@ -26,6 +26,7 @@ using System.Web.Http;
 using Newtonsoft.Json.Linq;
 
 using Rock.Model;
+using Rock.Obsidian.Controls;
 using Rock.Rest.Filters;
 using Rock.Web.Cache;
 
@@ -61,37 +62,28 @@ namespace Rock.Rest.Controllers
         /// Processes the action.
         /// </summary>
         /// <param name="verb">The verb.</param>
-        /// <param name="controlType">Type of the control.</param>
+        /// <param name="controlTypeName">Type of the control.</param>
         /// <param name="actionName">Name of the action.</param>
         /// <param name="parameters">The parameters.</param>
         /// <returns></returns>
-        private IHttpActionResult ProcessControlAction( string verb, string controlType, string actionName, JToken parameters )
+        private IHttpActionResult ProcessControlAction( string verb, string controlTypeName, string actionName, JToken parameters )
         {
             // Get the authenticated person
             var person = GetPerson();
             HttpContext.Current.AddOrReplaceItem( "CurrentPerson", person );
 
-            // Get the class that handles the logic for the control.
-            var blockCompiledType = blockCache.BlockType.GetCompiledType();
-            var block = Activator.CreateInstance( blockCompiledType );
+            // Get the class that handles the logic for the control
+            var controlCompiledType = ObsidianControlsContainer.Get( controlTypeName );
+            var controlInstance = Activator.CreateInstance( controlCompiledType ) as IObsidianControl;
 
-            if ( !( block is Blocks.IRockBlockType rockBlock ) )
+            if ( controlInstance == null )
             {
                 return NotFound();
             }
 
-            //
-            // Set the basic block parameters.
-            //
-            rockBlock.BlockCache = blockCache;
-            rockBlock.PageCache = pageCache;
-            rockBlock.RequestContext = new Net.RockRequestContext( Request );
-
+            // Parse any posted parameter data
             var actionParameters = new Dictionary<string, JToken>();
 
-            //
-            // Parse any posted parameter data.
-            //
             if ( parameters != null )
             {
                 try
@@ -107,39 +99,27 @@ namespace Rock.Rest.Controllers
                 }
             }
 
-            //
             // Parse any query string parameter data.
-            //
             foreach ( var q in Request.GetQueryNameValuePairs() )
             {
                 actionParameters.AddOrReplace( q.Key, JToken.FromObject( q.Value.ToString() ) );
             }
 
-            return InvokeAction( rockBlock, verb, actionName, actionParameters );
+            return InvokeAction( controlInstance, verb, actionName, actionParameters );
         }
 
         /// <summary>
-        /// Processes the specified block action.
+        /// Invokes the action.
         /// </summary>
-        /// <param name="block">The block.</param>
-        /// <param name="verb">The HTTP Method Verb that was used for the request.</param>
+        /// <param name="control">The control.</param>
+        /// <param name="verb">The verb.</param>
         /// <param name="actionName">Name of the action.</param>
         /// <param name="actionParameters">The action parameters.</param>
         /// <returns></returns>
-        /// <exception cref="ArgumentNullException">
-        /// actionName
-        /// or
-        /// actionData
-        /// </exception>
-        private IHttpActionResult InvokeAction( Blocks.IRockBlockType block, string verb, string actionName, Dictionary<string, JToken> actionParameters )
+        private IHttpActionResult InvokeAction( IObsidianControl control, string verb, string actionName, Dictionary<string, JToken> actionParameters )
         {
-            MethodInfo action;
-
-            //
-            // Find the action they requested.
-            //
-            action = block.GetType().GetMethods( BindingFlags.Instance | BindingFlags.Public )
-                .SingleOrDefault( m => m.GetCustomAttribute<Blocks.BlockActionAttribute>()?.ActionName == actionName );
+            var action = control.GetType().GetMethods( BindingFlags.Instance | BindingFlags.Public )
+                .SingleOrDefault( m => m.GetCustomAttribute<ControlActionAttribute>()?.ActionName == actionName );
 
             if ( action == null )
             {
@@ -149,9 +129,7 @@ namespace Rock.Rest.Controllers
             var methodParameters = action.GetParameters();
             var parameters = new List<object>();
 
-            //
-            // Go through each parameter and convert it to the proper type.
-            //
+            // Go through each parameter and convert it to the proper type
             for ( int i = 0; i < methodParameters.Length; i++ )
             {
                 var key = actionParameters.Keys.SingleOrDefault( k => k.ToLowerInvariant() == methodParameters[i].Name.ToLower() );
@@ -160,16 +138,13 @@ namespace Rock.Rest.Controllers
                 {
                     try
                     {
-                        //
                         // If the target type is nullable and the action parameter is an empty
-                        // string then consider it null. A GET query cannot have null values.
-                        //
+                        // string then consider it null. A GET query cannot have null values
                         if ( Nullable.GetUnderlyingType( methodParameters[i].ParameterType ) != null )
                         {
                             if ( actionParameters[key].Type == JTokenType.String && actionParameters[key].ToString() == string.Empty )
                             {
                                 parameters.Add( null );
-
                                 continue;
                             }
                         }
@@ -194,27 +169,25 @@ namespace Rock.Rest.Controllers
             object result;
             try
             {
-                result = action.Invoke( block, parameters.ToArray() );
+                result = action.Invoke( control, parameters.ToArray() );
             }
             catch ( TargetInvocationException ex )
             {
                 ExceptionLogService.LogApiException( ex.InnerException, Request, GetPersonAlias() );
-                result = new Rock.Blocks.BlockActionResult( HttpStatusCode.InternalServerError );
+                result = new ControlActionResult( HttpStatusCode.InternalServerError );
             }
             catch ( Exception ex )
             {
                 ExceptionLogService.LogApiException( ex, Request, GetPersonAlias() );
-                result = new Rock.Blocks.BlockActionResult( HttpStatusCode.InternalServerError );
+                result = new ControlActionResult( HttpStatusCode.InternalServerError );
             }
 
-            //
-            // Handle the result type.
-            //
+            // Handle the result type
             if ( result is IHttpActionResult )
             {
                 return ( IHttpActionResult ) result;
             }
-            else if ( result is Rock.Blocks.BlockActionResult actionResult )
+            else if ( result is ControlActionResult actionResult )
             {
                 if ( actionResult.Error != null )
                 {

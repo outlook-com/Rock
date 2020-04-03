@@ -19,8 +19,6 @@
 </template>
 
 <script>
-    const { blockAction } = Obsidian.Blocks['Security/Login'];
-
     const setCookie = (cookie) => {
         let expires = '';
 
@@ -49,8 +47,9 @@
         window.location.href = decodeURIComponent(returnUrl);
     };
 
-    export default {
+    module.exports = {
         name: 'Security_Login',
+        inject: ['context'],
         data() {
             return {
                 username: '',
@@ -66,7 +65,7 @@
                 this.errorMessage = '';
 
                 try {
-                    const result = await blockAction('help');
+                    const result = await this.context.blockAction('help');
                     const url = result.data;
 
                     if (!url) {
@@ -89,7 +88,7 @@
                 this.errorMessage = '';
 
                 try {
-                    const result = await blockAction('login', {
+                    const result = await this.context.blockAction('login', {
                         username: this.username,
                         password: this.password,
                         rememberMe: this.rememberMe
