@@ -194,6 +194,9 @@ namespace RockWeb
                 }
 
                 ExceptionLogService.AlwaysLogToFile = false;
+
+                // Start the Rock Message Bus
+                Rock.Bus.Process.Start();
             }
             catch ( Exception ex )
             {
