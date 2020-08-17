@@ -15,6 +15,9 @@
 // </copyright>
 //
 
+using MassTransit;
+using Rock.Bus.Consumer;
+
 namespace Rock.Bus.Transport
 {
     /// <summary>
@@ -22,5 +25,33 @@ namespace Rock.Bus.Transport
     /// </summary>
     public abstract class BusTransportComponent : Rock.Extension.Component
     {
+        /// <summary>
+        /// Create the transport
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public abstract IBusControl Create<T>() where T : IRockConsumer;
+
+        /// <summary>
+        /// Gets a value indicating whether this instance is active.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if this instance is active; otherwise, <c>false</c>.
+        /// </value>
+        public override bool IsActive
+        {
+            get => true;
+        }
+
+        /// <summary>
+        /// Gets the order.
+        /// </summary>
+        /// <value>
+        /// The order.
+        /// </value>
+        public override int Order
+        {
+            get => 0;
+        }
     }
 }

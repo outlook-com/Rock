@@ -24,7 +24,7 @@ namespace Rock.Bus.Message
     /// <summary>
     /// Standard Rock Message
     /// </summary>
-    public class RockMessage : ICloudEvent<ICollection<RockMessageData>>
+    public class RockMessage : IRockMessage
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="RockMessage"/> class.

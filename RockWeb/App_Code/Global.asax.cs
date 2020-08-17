@@ -30,6 +30,7 @@ using System.Web.Routing;
 using DotLiquid;
 
 using Rock;
+using Rock.Bus;
 using Rock.Communication;
 using Rock.Data;
 using Rock.Logging;
@@ -196,7 +197,7 @@ namespace RockWeb
                 ExceptionLogService.AlwaysLogToFile = false;
 
                 // Start the Rock Message Bus
-                Rock.Bus.Process.Start();
+                RockMessageBus.Start();
             }
             catch ( Exception ex )
             {

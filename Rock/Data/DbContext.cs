@@ -25,6 +25,8 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Web;
 using DotLiquid;
+using Rock.Bus;
+using Rock.Bus.Message;
 using Rock.Model;
 using Rock.Transactions;
 using Rock.UniversalSearch;
@@ -402,6 +404,23 @@ namespace Rock.Data
                 {
                     var model = item.Entity as IModel;
                     model.PostSaveChanges( this );
+
+                    if ( item.PreSaveState != EntityState.Unchanged )
+                    {
+                        var message = new RockMessage
+                        {
+                            Type = $"{item.Entity.TypeName}.{item.PreSaveState}",
+                            Source = "RockPostSave"
+                        };
+
+                        message.Data.Add( new RockMessageData
+                        {
+                            EntityId = model.Id,
+                            EntityTypeId = item.Entity.TypeId
+                        } );
+
+                        Task.Run( () => RockMessageBus.Publish( message ) );
+                    }
                 }
 
                 // check if this entity should be passed on for indexing
@@ -539,7 +558,7 @@ namespace Rock.Data
         }
 
         /// <summary>
-        /// Does a direct bulk UPDATE. 
+        /// Does a direct bulk UPDATE.
         /// Example: rockContext.BulkUpdate( personQuery, p => new Person { LastName = "Decker" } );
         /// NOTE: This bypasses the Rock and a bunch of the EF Framework and automatically commits the changes to the database
         /// </summary>
@@ -660,7 +679,7 @@ namespace Rock.Data
 
         /// <summary>
         /// Determines whether the entity matches the current and/or previous qualifier values.
-        /// If 
+        /// If
         /// </summary>
         /// <param name="item">The item.</param>
         /// <param name="properties">The properties.</param>

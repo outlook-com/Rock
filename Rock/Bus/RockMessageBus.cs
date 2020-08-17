@@ -15,47 +15,53 @@
 // </copyright>
 //
 
-using System;
-using System.Diagnostics;
-using System.Threading;
+using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using MassTransit;
-using Mono.CSharp;
+using Rock.Bus.Consumer;
 using Rock.Bus.Message;
+using Rock.Bus.Transport;
 
 namespace Rock.Bus
 {
     /// <summary>
     /// Rock Bus Process Controls: Start the bus
     /// </summary>
-    public static class Process
+    public static class RockMessageBus
     {
+        private static readonly Collection<IBusControl> _buses = new Collection<IBusControl>();
+
         /// <summary>
         /// Starts this bus.
         /// </summary>
         public static async void Start()
         {
-            var bus = MassTransit.Bus.Factory.CreateUsingInMemory( ConfigureInMemory );
-            await bus.StartAsync();
+            var componentNames = new[]
+            {
+                "Rock.Bus.Transport.Component.InMemory",
+                "Rock.Bus.Transport.Component.RabbitMQ"
+            };
 
-            await bus.Publish( new RockMessage { Source = "Hi" } );
+            foreach ( var componentName in componentNames )
+            {
+                var component = BusTransportContainer.GetComponent( componentName );
+                var bus = component.Create<DebugLog>();
+                _buses.Add( bus );
+
+                await bus.StartAsync();
+            }
         }
 
         /// <summary>
-        /// Configures the in memory.
+        /// Publishes the specified rock message.
         /// </summary>
-        /// <param name="configurator">The configurator.</param>
-        private static void ConfigureInMemory( IInMemoryBusFactoryConfigurator configurator )
+        /// <param name="rockMessage">The rock message.</param>
+        public static async Task Publish( IRockMessage rockMessage )
         {
-            configurator.ReceiveEndpoint( "test_queue", ep =>
+            foreach ( var bus in _buses )
             {
-                ep.Handler<RockMessage>( context =>
-                {
-                    var message = $"Bus Received: {context.Message.Source} {context.Message.Time} {context.Message.Id}";
-                    Debug.WriteLine( message );
-                    return Console.Out.WriteLineAsync( message );
-                } );
-            } );
+                await bus.Publish( rockMessage );
+            }
         }
     }
 }
