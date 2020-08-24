@@ -23,7 +23,7 @@ namespace Rock.Bus.Message
     /// <summary>
     /// CloudEvent Spec
     /// </summary>
-    public interface ICloudEvent<T>
+    public interface ICloudEvent
     {
         /// <summary>
         /// The spec version
@@ -79,6 +79,6 @@ namespace Rock.Bus.Message
         /// Ex: { "key": "value" }
         /// </summary>
         [JsonProperty( "data" )]
-        T Data { get; set; }
+        object Data { get; set; }
     }
 }

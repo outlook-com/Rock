@@ -19,6 +19,8 @@ using System;
 using System.ComponentModel;
 using System.ComponentModel.Composition;
 using MassTransit;
+using Rock.Bus.Consumer;
+using Rock.Bus.Message;
 
 namespace Rock.Bus.Transport.Component
 {
@@ -26,7 +28,7 @@ namespace Rock.Bus.Transport.Component
     /// In-Memory Transport
     /// </summary>
     /// <seealso cref="BusTransportComponent" />
- 
+
     [Description( "In-Memory Message Bus Transport" )]
     [Export( typeof( BusTransportComponent ) )]
     [ExportMetadata( "ComponentName", "In-Memory" )]
@@ -36,15 +38,18 @@ namespace Rock.Bus.Transport.Component
         /// <summary>
         /// Create the transport
         /// </summary>
-        public override IBusControl Create<T>()
+        /// <param name="consumerFactories">The consumer factories.</param>
+        /// <returns></returns>
+        public override IBusControl Create( params Func<IRockConsumer<IRockMessage>>[] consumerFactories )
         {
-            var consumerType = typeof( T );
-
             return MassTransit.Bus.Factory.CreateUsingInMemory( configurator =>
             {
                 configurator.ReceiveEndpoint( "in-memory-queue", ep =>
                 {
-                    ep.Consumer( consumerType, type => Activator.CreateInstance( consumerType ) );
+                    foreach ( var consumerFactory in consumerFactories )
+                    {
+                        ep.Consumer( consumerFactory );
+                    }
                 } );
             } );
         }

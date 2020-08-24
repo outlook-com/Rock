@@ -19,6 +19,9 @@ using System;
 using System.ComponentModel;
 using System.ComponentModel.Composition;
 using MassTransit;
+using Rock.Bus.Consumer;
+using Rock.Bus.Message;
+using Rock.Transactions;
 
 namespace Rock.Bus.Transport.Component
 {
@@ -36,20 +39,46 @@ namespace Rock.Bus.Transport.Component
         /// <summary>
         /// Create the transport
         /// </summary>
-        public override IBusControl Create<T>()
+        /// <param name="consumerFactories">The consumer factories.</param>
+        /// <returns></returns>
+        public override IBusControl Create( params Func<IRockConsumer<IRockMessage>>[] consumerFactories )
         {
-            var consumerType = typeof( T );
-
             return MassTransit.Bus.Factory.CreateUsingRabbitMq( configurator =>
             {
-                configurator.Host( new Uri( "amqp://REDACTED" ), host =>
+                configurator.Host( new Uri( "amqps://REDACTED" ), host =>
                 {
                     // https://api.cloudamqp.com/console/8455ad06-9a01-421a-bdab-2a22f920aa4a/details
                 } );
 
                 configurator.ReceiveEndpoint( "rabbit-mq-queue", ep =>
                 {
-                    ep.Consumer( consumerType, type => Activator.CreateInstance( consumerType ) );
+                    /*
+                    foreach(var consumerFactory in consumerFactories)
+                    {
+                        ep.Consumer( consumerFactory );
+                    }
+                    */
+
+                    //ep.Consumer<TransactionRunnerConsumer>();
+                    ep.Consumer<StreakTypeRebuildTransaction>();
+                    ep.Consumer<InteractionTransaction>();
+
+                    /*
+                    ep.Handler<TransactionRunnerMessage>( context =>
+                    {
+                        return new TransactionRunnerConsumer().Consume( context );
+                    } );
+
+                    ep.Handler<StreakRebuildMessage>( context =>
+                    {
+                        return new StreakTypeRebuildTransaction().Consume( context );
+                    } );
+
+                    ep.Handler<AddInteractionMessage>( context =>
+                    {
+                        return new InteractionTransaction().Consume( context );
+                    } );
+                    */
                 } );
             } );
         }

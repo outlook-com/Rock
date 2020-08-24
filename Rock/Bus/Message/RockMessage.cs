@@ -16,8 +16,6 @@
 //
 
 using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
 
 namespace Rock.Bus.Message
 {
@@ -83,11 +81,6 @@ namespace Rock.Bus.Message
         /// Gets or sets the data.
         /// Ex: { "key": "value" }
         /// </summary>
-        public ICollection<RockMessageData> Data
-        {
-            get => _data ?? ( _data = new Collection<RockMessageData>() );
-            set => _data = value;
-        }
-        private ICollection<RockMessageData> _data;
+        public object Data { get; set; }
     }
 }

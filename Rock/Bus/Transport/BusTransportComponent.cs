@@ -15,8 +15,11 @@
 // </copyright>
 //
 
+using System;
+using System.Collections.ObjectModel;
 using MassTransit;
 using Rock.Bus.Consumer;
+using Rock.Bus.Message;
 
 namespace Rock.Bus.Transport
 {
@@ -28,9 +31,9 @@ namespace Rock.Bus.Transport
         /// <summary>
         /// Create the transport
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <param name="consumerFactories">The consumer factories.</param>
         /// <returns></returns>
-        public abstract IBusControl Create<T>() where T : IRockConsumer;
+        public abstract IBusControl Create( params Func<IRockConsumer<IRockMessage>>[] consumerFactories );
 
         /// <summary>
         /// Gets a value indicating whether this instance is active.

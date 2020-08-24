@@ -16,6 +16,11 @@
 //
 
 using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
+using MassTransit;
+using Rock.Bus.Consumer;
+using Rock.Bus.Message;
 using Rock.Model;
 
 namespace Rock.Transactions
@@ -24,7 +29,7 @@ namespace Rock.Transactions
     /// Transaction to rebuild streak type data from attendance data
     /// </summary>
     /// <seealso cref="Rock.Transactions.ITransaction" />
-    public class StreakTypeRebuildTransaction : ITransactionWithProgress
+    public class StreakTypeRebuildTransaction : ITransactionWithProgress, IConsumer<StreakRebuildMessage>
     {
         /// <summary>
         /// Gets the progress. Should report between 0 and 100 to represent the percent complete or
@@ -38,16 +43,24 @@ namespace Rock.Transactions
         /// <summary>
         /// Gets the streak type identifier.
         /// </summary>
-        private int StreakTypeId { get; }
+        private int StreakTypeId { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="StreakTypeRebuildTransaction"/> class.
         /// </summary>
         /// <param name="streakTypeId">The streak type identifier.</param>
-        public StreakTypeRebuildTransaction( int streakTypeId )
+        public StreakTypeRebuildTransaction()
+        {
+            Progress = new Progress<int?>();
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="StreakTypeRebuildTransaction"/> class.
+        /// </summary>
+        /// <param name="streakTypeId">The streak type identifier.</param>
+        public StreakTypeRebuildTransaction( int streakTypeId ) : this()
         {
             StreakTypeId = streakTypeId;
-            Progress = new Progress<int?>();
         }
 
         /// <summary>
@@ -73,6 +86,18 @@ namespace Rock.Transactions
         private void ReportProgress(int progress)
         {
             ( ( IProgress<int?> ) Progress ).Report( progress );
+        }
+
+        /// <summary>
+        /// Consumes the specified context.
+        /// </summary>
+        /// <param name="context">The context.</param>
+        /// <returns></returns>
+        public Task Consume( ConsumeContext<StreakRebuildMessage> context )
+        {
+            return Task.Run(() => {
+                Debug.WriteLine( $"Consuming StreakRebuildMessage" );
+            } );
         }
     }
 }

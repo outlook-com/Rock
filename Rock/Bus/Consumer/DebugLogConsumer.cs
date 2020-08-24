@@ -15,7 +15,6 @@
 // </copyright>
 //
 
-using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using MassTransit;
@@ -26,7 +25,7 @@ namespace Rock.Bus.Consumer
     /// <summary>
     /// Log messages for debug
     /// </summary>
-    public class DebugLog : IRockConsumer
+    public class DebugLogConsumer : IRockConsumer<IRockMessage>
     {
         /// <summary>
         /// Consumes the specified context.
@@ -35,11 +34,12 @@ namespace Rock.Bus.Consumer
         /// <returns></returns>
         public Task Consume( ConsumeContext<IRockMessage> context )
         {
-            var messageAsJson = context.Message.ToJson( Newtonsoft.Json.Formatting.Indented );
-            var channel = context.ReceiveContext.InputAddress;
-            var message = $"-- BEGIN BUS DEBUG --\n{channel}\n{messageAsJson}\n-- END BUS DEBUG --";
-            Debug.WriteLine( message );
-            return Console.Out.WriteLineAsync( message );
+            return Task.Run(() => {
+                var messageAsJson = context.Message.ToJson( Newtonsoft.Json.Formatting.Indented );
+                var channel = context.ReceiveContext.InputAddress;
+                var message = $"-- BEGIN BUS DEBUG --\n{channel}\n{messageAsJson}\n-- END BUS DEBUG --";
+                Debug.WriteLine( message );
+            } );
         }
     }
 }

@@ -17,11 +17,13 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Web;
-
+using MassTransit;
 using Rock;
+using Rock.Bus.Consumer;
 using Rock.Data;
 using Rock.Model;
 using Rock.Web.Cache;
@@ -32,7 +34,7 @@ namespace Rock.Transactions
     /// <summary>
     /// Transaction that will insert <seealso cref="Rock.Model.Interaction">Interactions</seealso>. For example, Page Views.
     /// </summary>
-    public class InteractionTransaction : ITransaction
+    public class InteractionTransaction : ITransaction, IConsumer<AddInteractionMessage>
     {
         /// <summary>
         /// Keep a list of all the Interactions that have been queued up then insert them all at once 
@@ -68,6 +70,13 @@ namespace Rock.Transactions
         [Obsolete( "Use a constructor that takes InteractionTransactionInfo." )]
         [RockObsolete( "1.11" )]
         public int? CurrentPersonAliasId { get; set; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="InteractionTransaction"/> class.
+        /// </summary>
+        public InteractionTransaction()
+        {
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Transactions.InteractionTransaction"/> class.
@@ -265,6 +274,19 @@ namespace Rock.Transactions
             // model hooks, streaks need to be updated here. Also, it is not necessary for this logic to complete before this
             // transaction can continue processing and exit, so update the streak using a task.
             interactionsToInsert.ForEach( i => Task.Run( () => StreakTypeService.HandleInteractionRecord( i ) ) );
+        }
+
+        /// <summary>
+        /// Consumes the specified context.
+        /// </summary>
+        /// <param name="context">The context.</param>
+        /// <returns></returns>
+        /// <exception cref="System.NotImplementedException"></exception>
+        public Task Consume( ConsumeContext<AddInteractionMessage> context )
+        {
+            return Task.Run( () =>
+                Debug.WriteLine( $"Consuming InteractionTransaction" )
+            );
         }
     }
 

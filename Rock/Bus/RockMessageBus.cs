@@ -15,12 +15,14 @@
 // </copyright>
 //
 
-using System.Collections.ObjectModel;
-using System.Threading.Tasks;
 using MassTransit;
 using Rock.Bus.Consumer;
 using Rock.Bus.Message;
 using Rock.Bus.Transport;
+using Rock.Transactions;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace Rock.Bus
 {
@@ -29,7 +31,7 @@ namespace Rock.Bus
     /// </summary>
     public static class RockMessageBus
     {
-        private static readonly Collection<IBusControl> _buses = new Collection<IBusControl>();
+        private static readonly ConcurrentBag<IBusControl> _buses = new ConcurrentBag<IBusControl>();
 
         /// <summary>
         /// Starts this bus.
@@ -38,29 +40,37 @@ namespace Rock.Bus
         {
             var componentNames = new[]
             {
-                "Rock.Bus.Transport.Component.InMemory",
+                //"Rock.Bus.Transport.Component.InMemory",
                 "Rock.Bus.Transport.Component.RabbitMQ"
             };
 
             foreach ( var componentName in componentNames )
             {
                 var component = BusTransportContainer.GetComponent( componentName );
-                var bus = component.Create<DebugLog>();
+                var bus = component.Create(
+                    //() => (IRockConsumer<IRockMessage>) new TransactionRunnerConsumer(),
+                    () => new DebugLogConsumer()
+                );
                 _buses.Add( bus );
 
                 await bus.StartAsync();
+
+                bus.ConnectConsumer<StreakTypeRebuildTransaction>();
+                bus.ConnectConsumer<InteractionTransaction>();
             }
         }
 
         /// <summary>
         /// Publishes the specified rock message.
         /// </summary>
-        /// <param name="rockMessage">The rock message.</param>
-        public static async Task Publish( IRockMessage rockMessage )
+        /// <param name="message">The message.</param>
+        public static async Task Publish<T>( T message ) where T : class
         {
+            Debug.WriteLine( $"Publishing {typeof( T )}" );
+
             foreach ( var bus in _buses )
             {
-                await bus.Publish( rockMessage );
+                await bus.Publish( message );
             }
         }
     }

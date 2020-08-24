@@ -26,6 +26,7 @@ using System.Threading.Tasks;
 using System.Web;
 using DotLiquid;
 using Rock.Bus;
+using Rock.Bus.Consumer;
 using Rock.Bus.Message;
 using Rock.Model;
 using Rock.Transactions;
@@ -404,24 +405,26 @@ namespace Rock.Data
                 {
                     var model = item.Entity as IModel;
                     model.PostSaveChanges( this );
+                }
 
-                    if ( item.PreSaveState != EntityState.Unchanged )
+                /*
+                if ( item.Entity is Person )
+                {
+                    if ( item.PreSaveState == EntityState.Added )
                     {
-                        var message = new RockMessage
+                        Task.Run( () => RockMessageBus.Publish( new PersonAddedMessage {
+                            PersonId = item.Entity.Id
+                        } ) );
+                    }
+                    else if ( item.PreSaveState == EntityState.Modified )
+                    {
+                        Task.Run( () => RockMessageBus.Publish( new PersonUpdatedMessage
                         {
-                            Type = $"{item.Entity.TypeName}.{item.PreSaveState}",
-                            Source = "RockPostSave"
-                        };
-
-                        message.Data.Add( new RockMessageData
-                        {
-                            EntityId = model.Id,
-                            EntityTypeId = item.Entity.TypeId
-                        } );
-
-                        Task.Run( () => RockMessageBus.Publish( message ) );
+                            PersonId = item.Entity.Id
+                        } ) );
                     }
                 }
+                */
 
                 // check if this entity should be passed on for indexing
                 if ( item.Entity is IRockIndexable )
