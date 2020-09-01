@@ -208,6 +208,16 @@ namespace RockWeb
                 throw startupException;
             }
 
+            new Thread( () =>
+            {
+                Thread.CurrentThread.IsBackground = true;
+                Stopwatch stopwatchCompileBlockTypes = Stopwatch.StartNew();
+                var allBlockTypeIds = new BlockTypeService( new RockContext() ).Queryable().Select( a => a.Id ).ToArray();
+                BlockTypeService.VerifyBlockTypeInstanceProperties( allBlockTypeIds );
+                Debug.WriteLine( string.Format( "[{0,5:#} seconds] All block types Compiled", stopwatchCompileBlockTypes.Elapsed.TotalSeconds ) );
+            } ).Start();
+
+
             // Update attributes for new workflow actions, instead of doing them on demand
             // Not sure why we did this but this is the commit c23a4021d2ce7be96a30bae8c431c113f942f26f
             new Thread( () =>
@@ -226,7 +236,7 @@ namespace RockWeb
                 {
                     if ( messages.IsNullOrWhiteSpace() )
                     {
-                        System.Diagnostics.Debug.WriteLine( string.Format( "[{0,5:#} seconds] Less files compiled successfully. ", + stopwatchCompileLess.Elapsed.TotalSeconds ) );
+                        System.Diagnostics.Debug.WriteLine( string.Format( "[{0,5:#} seconds] Less files compiled successfully. ", +stopwatchCompileLess.Elapsed.TotalSeconds ) );
                     }
                     else
                     {

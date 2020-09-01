@@ -17,18 +17,20 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Entity;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
 using Rock.Data;
 using Rock.Web.Cache;
+using Rock.Web.UI;
 
 namespace Rock.Model
 {
     /// <summary>
     /// Data access/service class for <see cref="Rock.Model.BlockType"/> objects.
     /// </summary>
-    public partial class BlockTypeService 
+    public partial class BlockTypeService
     {
 
         /// <summary>
@@ -61,6 +63,58 @@ namespace Rock.Model
         public IQueryable<BlockType> GetByPath( string path )
         {
             return Queryable().Where( t => t.Path == path );
+        }
+
+        private static readonly object _verifyBlockTypeInstancePropertiesLockObj = new object();
+
+        /// <summary>
+        /// Compiles all block types.
+        /// </summary>
+        public static void VerifyBlockTypeInstanceProperties( int[] blockTypesIdToVerify )
+        {
+            double totalCompileTimeMS = 0.0;
+            foreach ( int blockTypeId in blockTypesIdToVerify )
+            {
+                try
+                {
+                    if ( BlockTypeCache.Get( blockTypeId )?.IsInstancePropertiesVerified == false )
+                    {
+                        var stopWatchCompileBlock = Stopwatch.StartNew();
+
+                        // make sure that only one thread is trying to compile block properties so that we don't get collisions and unneeded compiler overhead
+                        lock ( _verifyBlockTypeInstancePropertiesLockObj )
+                        {
+                            if ( BlockTypeCache.Get( blockTypeId )?.IsInstancePropertiesVerified == false )
+                            {
+                                using ( var rockContext = new RockContext() )
+                                {
+                                    var blockTypeCache = BlockTypeCache.Get( blockTypeId );
+                                    Type blockCompiledType = blockTypeCache.GetCompiledType();
+
+                                    bool attributesUpdated = RockBlock.CreateAttributes( rockContext, blockCompiledType, blockTypeId );
+                                    BlockTypeCache.Get( blockTypeId )?.MarkInstancePropertiesVerified( true );
+                                }
+                            }
+                        }
+
+                        stopWatchCompileBlock.Stop();
+                        var blockTypeCompileTimeMS = stopWatchCompileBlock.Elapsed.TotalMilliseconds;
+                        if ( blockTypeCompileTimeMS >= 10.0 )
+                        {
+                            var message = string.Format( "[{0,5:#} ms] Compile Block Type: {1}", blockTypeCompileTimeMS, BlockTypeCache.Get( blockTypeId ) );
+                            Debug.WriteLine( message );
+                        }
+
+                        totalCompileTimeMS += blockTypeCompileTimeMS;
+                    }
+                }
+                catch (Exception ex)
+                {
+
+                    Debug.WriteLine( ex );
+                    // ignore if the block couldn't be compiled, it'll get logged and shown when the page tries to load the block into the page
+                }
+            }
         }
 
         /// <summary>
