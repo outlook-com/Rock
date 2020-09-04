@@ -20,7 +20,7 @@ using System.Data.Entity;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-
+using System.Threading;
 using Rock.Data;
 using Rock.Web.Cache;
 using Rock.Web.UI;
@@ -32,7 +32,6 @@ namespace Rock.Model
     /// </summary>
     public partial class BlockTypeService
     {
-
         /// <summary>
         /// Gets a <see cref="Rock.Model.BlockType"/> by its Guid.
         /// </summary>
@@ -42,7 +41,6 @@ namespace Rock.Model
         {
             return Queryable().FirstOrDefault( t => t.Guid == guid );
         }
-
 
         /// <summary>
         /// Gets a collection of <see cref="Rock.Model.BlockType"/> entities by Name
@@ -54,7 +52,6 @@ namespace Rock.Model
             return Queryable().Where( t => t.Name == name );
         }
 
-
         /// <summary>
         /// Gets a collection of <see cref="Rock.Model.BlockType" /> entities by path.
         /// </summary>
@@ -65,24 +62,51 @@ namespace Rock.Model
             return Queryable().Where( t => t.Path == path );
         }
 
-        private static readonly object _verifyBlockTypeInstancePropertiesLockObj = new object();
+        /// <summary>
+        /// Lock obj to make sure that we aren't compiling more than one BlockType at a time. This prevents
+        /// block types from spending time compiling even though another thread might have started compiling it.
+        /// </summary>
+        private static readonly object VerifyBlockTypeInstancePropertiesLockObj = new object();
 
         /// <summary>
-        /// Compiles all block types.
+        /// Verifies the block type instance properties to make sure they are compiled and have the attributes updated.
         /// </summary>
+        /// <param name="blockTypesIdToVerify">The block types identifier to verify.</param>
         public static void VerifyBlockTypeInstanceProperties( int[] blockTypesIdToVerify )
         {
-            double totalCompileTimeMS = 0.0;
+            CancellationToken cancellationToken;
+            VerifyBlockTypeInstanceProperties( blockTypesIdToVerify, cancellationToken );
+        }
+
+        /// <summary>
+        /// Verifies the block type instance properties to make sure they are compiled and have the attributes updated,
+        /// with an option to cancel the loop.
+        /// </summary>
+        public static void VerifyBlockTypeInstanceProperties( int[] blockTypesIdToVerify, CancellationToken cancellationToken )
+        {
+            if ( blockTypesIdToVerify.Length == 0 )
+            {
+                return;
+            }
+
             foreach ( int blockTypeId in blockTypesIdToVerify )
             {
+                if ( cancellationToken.IsCancellationRequested == true )
+                {
+                    return;
+                }
+
                 try
                 {
+                    /* 2020-09-04 MDP
+                     * Notice that we call BlockTypeCache.Get every time we need data from it.
+                     * We do this because the BlockTypeCache get easily get stale due to other threads.
+                     */
+                    
                     if ( BlockTypeCache.Get( blockTypeId )?.IsInstancePropertiesVerified == false )
                     {
-                        var stopWatchCompileBlock = Stopwatch.StartNew();
-
-                        // make sure that only one thread is trying to compile block properties so that we don't get collisions and unneeded compiler overhead
-                        lock ( _verifyBlockTypeInstancePropertiesLockObj )
+                        // make sure that only one thread is trying to compile block types and attributes so that we don't get collisions and unneeded compiler overhead
+                        lock ( VerifyBlockTypeInstancePropertiesLockObj )
                         {
                             if ( BlockTypeCache.Get( blockTypeId )?.IsInstancePropertiesVerified == false )
                             {
@@ -96,23 +120,12 @@ namespace Rock.Model
                                 }
                             }
                         }
-
-                        stopWatchCompileBlock.Stop();
-                        var blockTypeCompileTimeMS = stopWatchCompileBlock.Elapsed.TotalMilliseconds;
-                        if ( blockTypeCompileTimeMS >= 10.0 )
-                        {
-                            var message = string.Format( "[{0,5:#} ms] Compile Block Type: {1}", blockTypeCompileTimeMS, BlockTypeCache.Get( blockTypeId ) );
-                            Debug.WriteLine( message );
-                        }
-
-                        totalCompileTimeMS += blockTypeCompileTimeMS;
                     }
                 }
-                catch (Exception ex)
+                catch ( Exception ex )
                 {
-
-                    Debug.WriteLine( ex );
                     // ignore if the block couldn't be compiled, it'll get logged and shown when the page tries to load the block into the page
+                    Debug.WriteLine( ex );
                 }
             }
         }
@@ -186,7 +199,7 @@ namespace Rock.Model
                     }
                     catch ( Exception ex )
                     {
-                        System.Diagnostics.Debug.WriteLine( $"RegisterEntityBlockTypes failed for {type.FullName} with exception: {ex.Message}" );
+                        Debug.WriteLine( $"RegisterEntityBlockTypes failed for {type.FullName} with exception: {ex.Message}" );
                         ExceptionLogService.LogException( new Exception( string.Format( "Problem processing block with path '{0}'.", type.FullName ), ex ), null );
                     }
                 }
@@ -264,14 +277,18 @@ namespace Rock.Model
                                         {
                                             nameParts[i] = Path.GetFileNameWithoutExtension( nameParts[i] );
                                         }
+
                                         nameParts[i] = nameParts[i].SplitCase();
                                     }
+
                                     blockType.Name = string.Join( " > ", nameParts );
                                 }
+
                                 if ( blockType.Name.Length > 100 )
                                 {
                                     blockType.Name = blockType.Name.Truncate( 100 );
                                 }
+
                                 blockType.Category = Rock.Reflection.GetCategory( controlType ) ?? string.Empty;
                                 blockType.Description = Rock.Reflection.GetDescription( controlType ) ?? string.Empty;
 
@@ -289,22 +306,21 @@ namespace Rock.Model
                     }
                 }
             }
-
         }
 
         /// <summary>
         /// Finds all the <see cref="Rock.Model.BlockType">BlockTypes</see> within a given path.
         /// </summary>
         /// <param name="physWebAppPath">The physical web application path.</param>
-        /// <param name="list">A <see cref="System.Collections.Generic.Dictionary{String, String}"/> containing all the <see cref="Rock.Model.BlockType">BlockTypes</see> that have been found.</param>
-        /// <param name="folder">A <see cref="System.String"/> containing the subdirectory to to search through.</param>
+        /// <param name="list">A <see cref="System.Collections.Generic.Dictionary{String, String}" /> containing all the <see cref="Rock.Model.BlockType">BlockTypes</see> that have been found.</param>
+        /// <param name="folder">A <see cref="System.String" /> containing the subdirectory to to search through.</param>
         private static void FindAllBlocksInPath( string physWebAppPath, Dictionary<string, string> list, string folder )
         {
             // Determine the physical path (it will be something like "C:\blahblahblah\Blocks\" or "C:\blahblahblah\Plugins\")
-            string physicalPath = string.Format( @"{0}{1}{2}\", physWebAppPath, ( physWebAppPath.EndsWith( @"\" ) ) ? "" : @"\", folder );
+            string physicalPath = $"{physWebAppPath.EnsureTrailingBackslash()}{folder}";
 
             // Determine the virtual path (it will be either "~/Blocks/" or "~/Plugins/")
-            string virtualPath = string.Format( "~/{0}/", folder );
+            string virtualPath = $"~/{folder}/";
 
             // search for all blocks under the physical path 
             DirectoryInfo di = new DirectoryInfo( physicalPath );

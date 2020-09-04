@@ -1537,15 +1537,18 @@ namespace Rock.Web.UI
         }
 
         /// <summary>
-        /// Verifies the block type instance properties.
+        /// Verifies the block type instance properties to make sure they are compiled and have the attributes updated.
         /// </summary>
         private void VerifyBlockTypeInstanceProperties()
         {
-            Debug.WriteLine( "RockPage compiling Blocks - Start" );
             var blockTypesIdToVerify = _pageCache.Blocks.Select( a => a.BlockType ).Distinct().Where( a => a.IsInstancePropertiesVerified == false ).Select( a => a.Id ).ToList();
+            if ( !blockTypesIdToVerify.Any() )
+            {
+                return;
+            }
+
             BlockTypeService.VerifyBlockTypeInstanceProperties( blockTypesIdToVerify.ToArray() );
             Page.Trace.Warn( "\tCreating block attributes" );
-            Debug.WriteLine( "RockPage compiling Blocks - Done" );
         }
 
         /// <summary>
