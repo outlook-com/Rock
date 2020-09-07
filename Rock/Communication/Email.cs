@@ -50,23 +50,26 @@ namespace Rock.Communication
 
             string bounceMessage = message.IsNotNullOrWhiteSpace() ? $" ({message})" : "";
 
-            // get people who have those emails
-            PersonService personService = new PersonService( new RockContext() );
-            var peopleWithEmail = personService.GetByEmail( email ).Select( p => p.Id ).ToList();
-
-            foreach ( int personId in peopleWithEmail )
+            using ( var rockContext = new RockContext() )
             {
-                RockContext rockContext = new RockContext();
-                personService = new PersonService( rockContext );
-                Person person = personService.Get( personId );
+                // get people who have those emails
+                var personService = new PersonService( rockContext );
+                var peopleWithEmail = personService.GetByEmail( email ).Select( p => p.Id ).ToList();
 
-                if ( person.IsEmailActive == true )
+                foreach ( int personId in peopleWithEmail )
                 {
-                    person.IsEmailActive = false;
-                }
+                    personService = new PersonService( rockContext );
+                    var person = personService.Get( personId );
 
-                person.EmailNote = $"Email experienced a {bounceType.Humanize()} on {bouncedDateTime.ToShortDateString()}{bounceMessage}.";
-                rockContext.SaveChanges();
+                    if ( person.IsEmailActive == true )
+                    {
+                        person.IsEmailActive = false;
+                    }
+
+                    person.EmailNote = $"Email experienced a {bounceType.Humanize()} on {bouncedDateTime.ToShortDateString()} {bounceMessage}.";
+                    person.EmailNote = person.EmailNote.SubstringSafe( 0, 250 );
+                    rockContext.SaveChanges();
+                }
             }
         }
 
