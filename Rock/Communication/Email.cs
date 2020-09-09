@@ -68,25 +68,25 @@ namespace Rock.Communication
                         person.IsEmailActive = false;
                     }
 
-                    person.EmailNote = getEmailNote(bounceType, message, bouncedDateTime);
+                    person.EmailNote = GetEmailNote( bounceType, message, bouncedDateTime );
                     rockContext.SaveChanges();
                 }
             }
         }
 
-        private static string getEmailNote( BounceType bounceType, string message, DateTime bouncedDateTime )
+        private static string GetEmailNote( BounceType bounceType, string message, DateTime bouncedDateTime )
         {
             var messages = new Dictionary<string, string>
             {
-                {"550", "The user’s mailbox was unavailable or could not be found." },
+                {"550", "The user's mailbox was unavailable or could not be found." },
                 {"551", "The intended mailbox does not exist on this recipient server." },
-                {"552", "This message is larger than the current system limit or the recipient’s mailbox is full." },
+                {"552", "This message is larger than the current system limit or the recipient's mailbox is full." },
                 {"553", "The message was refused because the mailbox name is either malformed or does not exist." },
                 {"554", "Email refused." },
             };
 
             var emailNote = message;
-            foreach(string key in messages.Keys )
+            foreach ( string key in messages.Keys )
             {
                 if ( message.StartsWith( key ) )
                 {
@@ -98,6 +98,7 @@ namespace Rock.Communication
             emailNote = $"Email experienced a {bounceType.Humanize()} on {bouncedDateTime.ToShortDateString()}. {emailNote}";
             return emailNote.SafeSubstring( 0, 250 );
         }
+
         /// <summary>
         /// Notifies the admins.
         /// </summary>
@@ -107,7 +108,7 @@ namespace Rock.Communication
         /// <param name="themeRoot">The theme root.</param>
         /// <param name="createCommunicationHistory">if set to <c>true</c> [create communication history].</param>
         /// <exception cref="System.Exception">Error sending System Email: Could not read Email Medium Entity Type</exception>
-        public static void NotifyAdmins( string subject, string message, string appRoot = "", string themeRoot = "", bool createCommunicationHistory = true  )
+        public static void NotifyAdmins( string subject, string message, string appRoot = "", string themeRoot = "", bool createCommunicationHistory = true )
         {
             try
             {
