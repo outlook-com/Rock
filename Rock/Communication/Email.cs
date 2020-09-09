@@ -43,6 +43,7 @@ namespace Rock.Communication
         /// <param name="bouncedDateTime">The bounced date time.</param>
         public static void ProcessBounce( string email, BounceType bounceType, string message, DateTime bouncedDateTime )
         {
+            System.Diagnostics.Debug.WriteLine( $"ProcessBounce({email},{bounceType},{message},{bouncedDateTime})" );
             // currently only processing hard bounces
             if ( bounceType != BounceType.HardBounce )
             {
@@ -81,6 +82,7 @@ namespace Rock.Communication
                 {"551", "The intended mailbox does not exist on this recipient server." },
                 {"552", "This message is larger than the current system limit or the recipient’s mailbox is full." },
                 {"553", "The message was refused because the mailbox name is either malformed or does not exist." },
+                {"554", "Email refused." },
             };
 
             var emailNote = message;
@@ -93,7 +95,7 @@ namespace Rock.Communication
                 }
             }
 
-            emailNote = $"Email experienced a {bounceType.Humanize()} on {bouncedDateTime.ToShortDateString()} {emailNote}.";
+            emailNote = $"Email experienced a {bounceType.Humanize()} on {bouncedDateTime.ToShortDateString()}. {emailNote}";
             return emailNote.SafeSubstring( 0, 250 );
         }
         /// <summary>

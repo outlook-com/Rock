@@ -16,6 +16,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -97,10 +98,16 @@ internal class SendGridResponseAsync : IAsyncResult
         var request = _context.Request;
         var response = _context.Response;
 
-        response.ContentType = "text/plain";
+        foreach(string header in request.Headers.Keys )
+        {
+            System.Diagnostics.Debug.WriteLine( "{0}:{1}", header, request.Headers[header] );
+        }
 
+        response.ContentType = "text/plain";
+        System.Diagnostics.Debug.WriteLine( "StartAsyncTask(" + request.HttpMethod + ", " + request.ContentType + ")" );
         if ( request.HttpMethod != "POST" )
         {
+            System.Diagnostics.Debug.WriteLine( "Invalid request type." );
             response.Write( "Invalid request type." );
             response.StatusCode = ( int ) System.Net.HttpStatusCode.MethodNotAllowed;
             _completed = true;
@@ -134,10 +141,12 @@ internal class SendGridResponseAsync : IAsyncResult
             }
         }
 
+        System.Diagnostics.Debug.WriteLine( "ProcessJsonContent(" + payload + ")" );
         var eventList = JsonConvert.DeserializeObject<List<SendGridEvent>>( payload );
 
         if ( eventList == null )
         {
+            System.Diagnostics.Debug.WriteLine( "Invalid content type." );
             response.Write( "Invalid content type." );
             response.StatusCode = ( int ) System.Net.HttpStatusCode.NotAcceptable;
             return;
@@ -170,6 +179,10 @@ internal class SendGridResponseAsync : IAsyncResult
             actionGuid = sendGridEvent.WorkflowActionGuid.AsGuidOrNull();
         }
 
+        System.Diagnostics.Debug.WriteLine( "ProcessSendGridEvent {0}", sendGridEvent );
+
+        System.Diagnostics.Debug.WriteLine( "sendGridEvent.CommunicationRecipientGuid: {0}", sendGridEvent.CommunicationRecipientGuid );
+
         if ( !string.IsNullOrWhiteSpace( sendGridEvent.CommunicationRecipientGuid ) )
         {
             communicationRecipientGuid = sendGridEvent.CommunicationRecipientGuid.AsGuidOrNull();
@@ -194,6 +207,7 @@ internal class SendGridResponseAsync : IAsyncResult
     /// <param name="rockContext">The rock context.</param>
     private void ProcessForRecipient( Guid? communicationRecipientGuid, Rock.Data.RockContext rockContext, SendGridEvent payload )
     {
+        System.Diagnostics.Debug.WriteLine( "ProcessForRecipient({0}, {1}, {2})", communicationRecipientGuid, rockContext, payload );
         RockLogger.Log.Debug( RockLogDomains.Communications, "ProcessForRecipient {@payload}", payload );
 
         if ( !communicationRecipientGuid.HasValue )
@@ -204,6 +218,9 @@ internal class SendGridResponseAsync : IAsyncResult
         var communicationRecipient = new CommunicationRecipientService( rockContext ).Get( communicationRecipientGuid.Value );
         if ( communicationRecipient != null && communicationRecipient.Communication != null )
         {
+            System.Diagnostics.Debug.WriteLine( "communicationRecipient: {0}", communicationRecipient );
+            System.Diagnostics.Debug.WriteLine( "payload.EventType: {0}", payload.EventType );
+
             var communicationGuid = Rock.SystemGuid.InteractionChannel.COMMUNICATION.AsGuid();
             var interactionComponent = new InteractionComponentService( rockContext )
                 .GetComponentByEntityId( communicationGuid, communicationRecipient.CommunicationId, communicationRecipient.Communication.Subject );
@@ -221,6 +238,16 @@ internal class SendGridResponseAsync : IAsyncResult
                 case "dropped":
                     communicationRecipient.Status = CommunicationRecipientStatus.Failed;
                     communicationRecipient.StatusNote = payload.EventTypeReason;
+
+                    if ( payload.EventTypeReason == "Bounced Address" )
+                    {
+                        Rock.Communication.Email.ProcessBounce(
+                            payload.Email,
+                            Rock.Communication.BounceType.HardBounce,
+                            payload.EventTypeReason,
+                            timeStamp );
+                    }
+
                     break;
                 case "delivered":
                     communicationRecipient.Status = CommunicationRecipientStatus.Delivered;
