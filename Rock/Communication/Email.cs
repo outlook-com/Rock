@@ -16,6 +16,7 @@
 //
 using System;
 using System.Collections.Generic;
+using System.Drawing.Text;
 using System.Linq;
 using System.Net.Mail;
 using System.Web;
@@ -66,13 +67,35 @@ namespace Rock.Communication
                         person.IsEmailActive = false;
                     }
 
-                    person.EmailNote = $"Email experienced a {bounceType.Humanize()} on {bouncedDateTime.ToShortDateString()} {bounceMessage}.";
-                    person.EmailNote = person.EmailNote.SubstringSafe( 0, 250 );
+                    person.EmailNote = getEmailNote(bounceType, message, bouncedDateTime);
                     rockContext.SaveChanges();
                 }
             }
         }
 
+        private static string getEmailNote( BounceType bounceType, string message, DateTime bouncedDateTime )
+        {
+            var messages = new Dictionary<string, string>
+            {
+                {"550", "The user’s mailbox was unavailable or could not be found." },
+                {"551", "The intended mailbox does not exist on this recipient server." },
+                {"552", "This message is larger than the current system limit or the recipient’s mailbox is full." },
+                {"553", "The message was refused because the mailbox name is either malformed or does not exist." },
+            };
+
+            var emailNote = message;
+            foreach(string key in messages.Keys )
+            {
+                if ( message.StartsWith( key ) )
+                {
+                    emailNote = messages[key];
+                    break;
+                }
+            }
+
+            emailNote = $"Email experienced a {bounceType.Humanize()} on {bouncedDateTime.ToShortDateString()} {emailNote}.";
+            return emailNote.SafeSubstring( 0, 250 );
+        }
         /// <summary>
         /// Notifies the admins.
         /// </summary>
