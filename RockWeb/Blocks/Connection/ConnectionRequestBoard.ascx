@@ -517,7 +517,7 @@
                         </div>
 
                         <div runat="server" id="divFilterDrawer" class="panel-drawer" style="display: none;">
-                            <div class="container-fluid padding-t-md padding-b-md">
+                            <div class="container-fluid padding-t-md padding-b-md padding-l-lg padding-r-lg">
                                 <div class="row">
                                     <div class="col-md-4">
                                         <Rock:SlidingDateRangePicker ID="sdrpLastActivityDateRangeFilter" runat="server" Label="Last Activity Date Range" EnabledSlidingDateRangeUnits="Day, Week, Month, Year" EnabledSlidingDateRangeTypes="Previous, Last, Current, DateRange" />

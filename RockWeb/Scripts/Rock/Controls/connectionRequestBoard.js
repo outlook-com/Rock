@@ -228,7 +228,10 @@
             }
 
             indexCardsInColumn(newStatusId);
+            updateColCount(newStatusId, 1);
+
             indexCardsInColumn(oldStatusId);
+            updateColCount(oldStatusId, -1);
         };
 
         const updateColCount = function (statusId, delta) {
@@ -299,10 +302,19 @@
             }
 
             const $oldCard = $('.board-card[data-request-id=' + requestViewModel.Id + ']');
+            const oldStatusId = Number($oldCard.closest('[data-status-id]').data('statusId'));
+            const newStatusId = requestViewModel.StatusId;
+            const didStatusChange = oldStatusId && oldStatusId !== newStatusId;
+
             const newCardHtml = getCardHtml(requestViewModel);
             $oldCard.replaceWith(newCardHtml);
 
-            indexCardsInColumn(requestViewModel.StatusId);
+            if (didStatusChange) {
+                moveCard(requestViewModel.Id, newStatusId, 1);
+            }
+            else {
+                indexCardsInColumn(requestViewModel.StatusId);
+            }
         };
 
         const removeCard = function (connectionRequestId) {

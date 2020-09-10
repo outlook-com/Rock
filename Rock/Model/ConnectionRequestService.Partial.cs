@@ -170,14 +170,20 @@ namespace Rock.Model
                 lastActivityTypeIds,
                 sortProperty );
 
-            var connectionStatusViewModels = GetConnectionStatusQuery( connectionOpportunityId )
+            var connectionStatusQuery = GetConnectionStatusQuery( connectionOpportunityId )
                 .Select( cs => new ConnectionStatusViewModel
                 {
                     Id = cs.Id,
                     Name = cs.Name,
                     HighlightColor = cs.HighlightColor
-                } )
-                .ToList();
+                } );
+
+            if ( statusIds?.Any() == true )
+            {
+                connectionStatusQuery = connectionStatusQuery.Where( cs => statusIds.Contains( cs.Id ) );
+            }
+
+            var connectionStatusViewModels = connectionStatusQuery.ToList();
 
             foreach ( var statusViewModel in connectionStatusViewModels )
             {
