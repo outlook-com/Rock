@@ -212,6 +212,10 @@
         padding-bottom: 100%;
     }
 
+    .drag-scroll-zone-container {
+        position: relative;
+    }
+
     .drag-scroll-zone {
         position: absolute;
         min-width: 30px;
@@ -517,7 +521,7 @@
                         </div>
 
                         <div runat="server" id="divFilterDrawer" class="panel-drawer" style="display: none;">
-                            <div class="container-fluid padding-t-md padding-b-md padding-l-lg padding-r-lg">
+                            <div class="container-fluid padding-t-md padding-b-md">
                                 <div class="row">
                                     <div class="col-md-4">
                                         <Rock:SlidingDateRangePicker ID="sdrpLastActivityDateRangeFilter" runat="server" Label="Last Activity Date Range" EnabledSlidingDateRangeUnits="Day, Week, Month, Year" EnabledSlidingDateRangeTypes="Previous, Last, Current, DateRange" />
@@ -574,10 +578,12 @@
 
             <asp:UpdatePanel ID="upnlBoardView" runat="server" UpdateMode="Conditional">
                 <ContentTemplate>
-                    <div class="panel-body p-0 overflow-scroll board-column-container cursor-grab dragscroll">
-                        <div class="d-flex flex-row w-100 h-100 js-column-container"></div>
-                        <div class="drag-scroll-zone drag-scroll-zone-left"></div>
-                        <div class="drag-scroll-zone drag-scroll-zone-right"></div>
+                    <div class="drag-scroll-zone-container">
+                        <div class="panel-body p-0 overflow-scroll board-column-container cursor-grab dragscroll">
+                            <div class="d-flex flex-row w-100 h-100 js-column-container"></div>
+                            <div class="drag-scroll-zone drag-scroll-zone-left"></div>
+                            <div class="drag-scroll-zone drag-scroll-zone-right"></div>
+                        </div>
                     </div>
                 </ContentTemplate>
             </asp:UpdatePanel>
